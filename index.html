@@ -1,0 +1,256 @@
+snake_game_html = """
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <style>
+        #gameContainer {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #222;
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            width: 420px;
+            max-width: 90vw;
+            margin: auto;
+            box-sizing: border-box;
+        }
+        canvas {
+            background-color: #000;
+            border: 2px solid #fff;
+            display: block;
+            margin: 10px auto;
+            max-width: 100%;
+            touch-action: none;
+        }
+        .score-board {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+
+<div id="gameContainer">
+    <h2>🐍 經典貪吃蛇遊戲</h2>
+    <div class="score-board">分數: <span id="score">0</span></div>
+    <canvas id="snakeCanvas" width="400" height="400"></canvas>
+    <button onclick="startGame()">重新開始</button>
+    <p style="font-size: 12px; color: #aaa;">點擊遊戲畫面後，使用方向鍵 ↑ ↓ ← → 或在手機上滑動控制移動</p>
+</div>
+
+<script>
+    const canvas = document.getElementById("snakeCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreDisplay = document.getElementById("score");
+
+    const gridSize = 20;
+    const tileCount = canvas.width / gridSize;
+
+    let snake = [];
+    let food = { x: 0, y: 0 };
+    let dx = gridSize;
+    let dy = 0;
+    let score = 0;
+    let gameInterval = null;
+    let changingDirection = false;
+    let isGameRunning = false;
+
+    function startGame() {
+        snake = [
+            { x: 160, y: 200 },
+            { x: 140, y: 200 },
+            { x: 120, y: 200 }
+        ];
+        score = 0;
+        dx = gridSize;
+        dy = 0;
+        scoreDisplay.innerText = score;
+        isGameRunning = true;
+        generateFood();
+        
+        if (gameInterval) clearInterval(gameInterval);
+        gameInterval = setInterval(gameLoop, 120);
+    }
+
+    function gameLoop() {
+        if (isGameOver()) {
+            clearInterval(gameInterval);
+            isGameRunning = false;
+            alert("遊戲結束！最終得分: " + score);
+            return;
+        }
+
+        changingDirection = false;
+        clearCanvas();
+        drawFood();
+        moveSnake();
+        drawSnake();
+    }
+
+    function clearCanvas() {
+        ctx.fillStyle = "#000";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function drawSnake() {
+        snake.forEach((part, index) => {
+            ctx.fillStyle = index === 0 ? "#4CAF50" : "#81C784"; // 蛇頭顏色較深
+            ctx.strokeStyle = "#000";
+            ctx.fillRect(part.x, part.y, gridSize, gridSize);
+            ctx.strokeRect(part.x, part.y, gridSize, gridSize);
+        });
+    }
+
+    function moveSnake() {
+        const head = { x: snake[0].x + dx, y: snake[0].y + dy };
+        snake.unshift(head);
+
+        // 吃到食物
+        if (head.x === food.x && head.y === food.y) {
+            score += 10;
+            scoreDisplay.innerText = score;
+            generateFood();
+        } else {
+            snake.pop(); // 沒吃到食物時移除尾巴
+        }
+    }
+
+    function generateFood() {
+        food.x = Math.floor(Math.random() * tileCount) * gridSize;
+        food.y = Math.floor(Math.random() * tileCount) * gridSize;
+
+        // 確保食物不會生長在蛇身上
+        snake.forEach(part => {
+            if (part.x === food.x && part.y === food.y) {
+                generateFood();
+            }
+        });
+    }
+
+    function drawFood() {
+        ctx.fillStyle = "#FF5252";
+        ctx.fillRect(food.x, food.y, gridSize, gridSize);
+    }
+
+    function isGameOver() {
+        const head = snake[0];
+
+        // 撞牆檢查
+        const hitLeftWall = head.x < 0;
+        const hitRightWall = head.x >= canvas.width;
+        const hitTopWall = head.y < 0;
+        const hitBottomWall = head.y >= canvas.height;
+
+        if (hitLeftWall || hitRightWall || hitTopWall || hitBottomWall) {
+            return true;
+        }
+
+        // 撞到自己檢查
+        for (let i = 1; i < snake.length; i++) {
+            if (head.x === snake[i].x && head.y === snake[i].y) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // 方向設定控制函數
+    function setDirection(dir) {
+        if (changingDirection || !isGameRunning) return;
+
+        const goingUp = dy === -gridSize;
+        const goingDown = dy === gridSize;
+        const goingRight = dx === gridSize;
+        const goingLeft = dx === -gridSize;
+
+        if (dir === 'LEFT' && !goingRight) {
+            dx = -gridSize;
+            dy = 0;
+            changingDirection = true;
+        }
+        if (dir === 'UP' && !goingDown) {
+            dx = 0;
+            dy = -gridSize;
+            changingDirection = true;
+        }
+        if (dir === 'RIGHT' && !goingLeft) {
+            dx = gridSize;
+            dy = 0;
+            changingDirection = true;
+        }
+        if (dir === 'DOWN' && !goingUp) {
+            dx = 0;
+            dy = gridSize;
+            changingDirection = true;
+        }
+    }
+
+    // 鍵盤控制事件（電腦端）
+    document.addEventListener("keydown", changeDirection);
+
+    function changeDirection(event) {
+        const LEFT_KEY = 37;
+        const RIGHT_KEY = 39;
+        const UP_KEY = 38;
+        const DOWN_KEY = 40;
+
+        const keyPressed = event.keyCode;
+
+        if (keyPressed === LEFT_KEY) setDirection('LEFT');
+        if (keyPressed === UP_KEY) setDirection('UP');
+        if (keyPressed === RIGHT_KEY) setDirection('RIGHT');
+        if (keyPressed === DOWN_KEY) setDirection('DOWN');
+
+        // 防止按下方向鍵時頁面滾動
+        if ([LEFT_KEY, RIGHT_KEY, UP_KEY, DOWN_KEY].includes(keyPressed)) {
+            event.preventDefault();
+        }
+    }
+
+    // 手勢滑動控制（手機端）
+    let touchStartX = 0;
+    let touchStartY = 0;
+
+    canvas.addEventListener('touchstart', (e) => {
+        touchStartX = e.touches[0].clientX;
+        touchStartY = e.touches[0].clientY;
+    }, false);
+
+    canvas.addEventListener('touchend', (e) => {
+        let touchEndX = e.changedTouches[0].clientX;
+        let touchEndY = e.changedTouches[0].clientY;
+
+        let diffX = touchEndX - touchStartX;
+        let diffY = touchEndY - touchStartY;
+
+        // 判斷滑動距離超過 20px 才觸發，避免輕觸誤判
+        if (Math.abs(diffX) > Math.abs(diffY)) {
+            if (diffX > 20) setDirection('RIGHT');
+            else if (diffX < -20) setDirection('LEFT');
+        } else {
+            if (diffY > 20) setDirection('DOWN');
+            else if (diffY < -20) setDirection('UP');
+        }
+    }, false);
+
+    // 初始化繪製畫布（載入時顯示預設畫面，不自動開始）
+    clearCanvas();
+</script>
+</body>
+</html>
+"""
