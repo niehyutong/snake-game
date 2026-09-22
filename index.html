@@ -1,4 +1,3 @@
-snake_game_html = """
 <!DOCTYPE html>
 <html>
 <head>
@@ -13,7 +12,7 @@ snake_game_html = """
             border-radius: 10px;
             width: 420px;
             max-width: 90vw;
-            margin: auto;
+            margin: 20px auto;
             box-sizing: border-box;
         }
         canvas {
@@ -28,7 +27,7 @@ snake_game_html = """
             font-size: 18px;
             margin-bottom: 10px;
         }
-        button {
+        button.start-btn {
             padding: 8px 16px;
             font-size: 16px;
             cursor: pointer;
@@ -37,9 +36,40 @@ snake_game_html = """
             border: none;
             border-radius: 4px;
         }
-        button:hover {
+        button.start-btn:hover {
             background-color: #45a049;
         }
+
+        /* 十字方向鍵樣式 */
+        .controls {
+            margin-top: 15px;
+            display: grid;
+            grid-template-columns: repeat(3, 60px);
+            grid-template-rows: repeat(2, 60px);
+            gap: 10px;
+            justify-content: center;
+        }
+        .btn {
+            background-color: #333;
+            color: #fff;
+            border: 2px solid #4CAF50;
+            border-radius: 8px;
+            font-size: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+            cursor: pointer;
+        }
+        .btn:active {
+            background-color: #4CAF50;
+            color: #000;
+        }
+        .btn-up { grid-column: 2; grid-row: 1; }
+        .btn-left { grid-column: 1; grid-row: 2; }
+        .btn-down { grid-column: 2; grid-row: 2; }
+        .btn-right { grid-column: 3; grid-row: 2; }
     </style>
 </head>
 <body>
@@ -48,8 +78,17 @@ snake_game_html = """
     <h2>🐍 經典貪吃蛇遊戲</h2>
     <div class="score-board">分數: <span id="score">0</span></div>
     <canvas id="snakeCanvas" width="400" height="400"></canvas>
-    <button onclick="startGame()">重新開始</button>
-    <p style="font-size: 12px; color: #aaa;">點擊遊戲畫面後，使用方向鍵 ↑ ↓ ← → 或在手機上滑動控制移動</p>
+    <button class="start-btn" onclick="startGame()">重新開始</button>
+
+    <!-- 手機按鈕區域 -->
+    <div class="controls">
+        <button class="btn btn-up" onclick="setDirection('UP')">⬆️</button>
+        <button class="btn btn-left" onclick="setDirection('LEFT')">⬅️</button>
+        <button class="btn btn-down" onclick="setDirection('DOWN')">⬇️</button>
+        <button class="btn btn-right" onclick="setDirection('RIGHT')">➡️</button>
+    </div>
+
+    <p style="font-size: 12px; color: #aaa; margin-top: 15px;">使用鍵盤方向鍵、螢幕按鈕或滑動控制移動</p>
 </div>
 
 <script>
@@ -108,7 +147,7 @@ snake_game_html = """
 
     function drawSnake() {
         snake.forEach((part, index) => {
-            ctx.fillStyle = index === 0 ? "#4CAF50" : "#81C784"; // 蛇頭顏色較深
+            ctx.fillStyle = index === 0 ? "#4CAF50" : "#81C784";
             ctx.strokeStyle = "#000";
             ctx.fillRect(part.x, part.y, gridSize, gridSize);
             ctx.strokeRect(part.x, part.y, gridSize, gridSize);
@@ -119,13 +158,12 @@ snake_game_html = """
         const head = { x: snake[0].x + dx, y: snake[0].y + dy };
         snake.unshift(head);
 
-        // 吃到食物
         if (head.x === food.x && head.y === food.y) {
             score += 10;
             scoreDisplay.innerText = score;
             generateFood();
         } else {
-            snake.pop(); // 沒吃到食物時移除尾巴
+            snake.pop();
         }
     }
 
@@ -133,7 +171,6 @@ snake_game_html = """
         food.x = Math.floor(Math.random() * tileCount) * gridSize;
         food.y = Math.floor(Math.random() * tileCount) * gridSize;
 
-        // 確保食物不會生長在蛇身上
         snake.forEach(part => {
             if (part.x === food.x && part.y === food.y) {
                 generateFood();
@@ -149,7 +186,6 @@ snake_game_html = """
     function isGameOver() {
         const head = snake[0];
 
-        // 撞牆檢查
         const hitLeftWall = head.x < 0;
         const hitRightWall = head.x >= canvas.width;
         const hitTopWall = head.y < 0;
@@ -159,7 +195,6 @@ snake_game_html = """
             return true;
         }
 
-        // 撞到自己檢查
         for (let i = 1; i < snake.length; i++) {
             if (head.x === snake[i].x && head.y === snake[i].y) {
                 return true;
@@ -169,7 +204,7 @@ snake_game_html = """
         return false;
     }
 
-    // 方向設定控制函數
+    // 方向設定（按鈕與手勢共通）
     function setDirection(dir) {
         if (changingDirection || !isGameRunning) return;
 
@@ -178,67 +213,36 @@ snake_game_html = """
         const goingRight = dx === gridSize;
         const goingLeft = dx === -gridSize;
 
-        if (dir === 'LEFT' && !goingRight) {
-            dx = -gridSize;
-            dy = 0;
-            changingDirection = true;
-        }
-        if (dir === 'UP' && !goingDown) {
-            dx = 0;
-            dy = -gridSize;
-            changingDirection = true;
-        }
-        if (dir === 'RIGHT' && !goingLeft) {
-            dx = gridSize;
-            dy = 0;
-            changingDirection = true;
-        }
-        if (dir === 'DOWN' && !goingUp) {
-            dx = 0;
-            dy = gridSize;
-            changingDirection = true;
-        }
+        if (dir === 'LEFT' && !goingRight) { dx = -gridSize; dy = 0; changingDirection = true; }
+        if (dir === 'UP' && !goingDown) { dx = 0; dy = -gridSize; changingDirection = true; }
+        if (dir === 'RIGHT' && !goingLeft) { dx = gridSize; dy = 0; changingDirection = true; }
+        if (dir === 'DOWN' && !goingUp) { dx = 0; dy = gridSize; changingDirection = true; }
     }
 
-    // 鍵盤控制事件（電腦端）
-    document.addEventListener("keydown", changeDirection);
+    // 電腦鍵盤控制
+    document.addEventListener("keydown", (event) => {
+        const LEFT_KEY = 37, RIGHT_KEY = 39, UP_KEY = 38, DOWN_KEY = 40;
+        if (event.keyCode === LEFT_KEY) setDirection('LEFT');
+        if (event.keyCode === UP_KEY) setDirection('UP');
+        if (event.keyCode === RIGHT_KEY) setDirection('RIGHT');
+        if (event.keyCode === DOWN_KEY) setDirection('DOWN');
 
-    function changeDirection(event) {
-        const LEFT_KEY = 37;
-        const RIGHT_KEY = 39;
-        const UP_KEY = 38;
-        const DOWN_KEY = 40;
-
-        const keyPressed = event.keyCode;
-
-        if (keyPressed === LEFT_KEY) setDirection('LEFT');
-        if (keyPressed === UP_KEY) setDirection('UP');
-        if (keyPressed === RIGHT_KEY) setDirection('RIGHT');
-        if (keyPressed === DOWN_KEY) setDirection('DOWN');
-
-        // 防止按下方向鍵時頁面滾動
-        if ([LEFT_KEY, RIGHT_KEY, UP_KEY, DOWN_KEY].includes(keyPressed)) {
+        if ([LEFT_KEY, RIGHT_KEY, UP_KEY, DOWN_KEY].includes(event.keyCode)) {
             event.preventDefault();
         }
-    }
+    });
 
-    // 手勢滑動控制（手機端）
-    let touchStartX = 0;
-    let touchStartY = 0;
-
+    // 手機畫面手勢滑動輔助控制
+    let touchStartX = 0, touchStartY = 0;
     canvas.addEventListener('touchstart', (e) => {
         touchStartX = e.touches[0].clientX;
         touchStartY = e.touches[0].clientY;
     }, false);
 
     canvas.addEventListener('touchend', (e) => {
-        let touchEndX = e.changedTouches[0].clientX;
-        let touchEndY = e.changedTouches[0].clientY;
+        let diffX = e.changedTouches[0].clientX - touchStartX;
+        let diffY = e.changedTouches[0].clientY - touchStartY;
 
-        let diffX = touchEndX - touchStartX;
-        let diffY = touchEndY - touchStartY;
-
-        // 判斷滑動距離超過 20px 才觸發，避免輕觸誤判
         if (Math.abs(diffX) > Math.abs(diffY)) {
             if (diffX > 20) setDirection('RIGHT');
             else if (diffX < -20) setDirection('LEFT');
@@ -248,9 +252,7 @@ snake_game_html = """
         }
     }, false);
 
-    // 初始化繪製畫布（載入時顯示預設畫面，不自動開始）
     clearCanvas();
 </script>
 </body>
 </html>
-"""
